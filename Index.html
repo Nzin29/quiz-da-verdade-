@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz da Verdade</title>
+    <style>
+        :root {
+            --rosa-brilhante: #ff69b4;
+            --rosa-escuro: #ff1493;
+            --preto: #0a0a0a;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--preto);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: white;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        .background-hearts {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .heart {
+            position: absolute;
+            color: var(--rosa-brilhante);
+            opacity: 0.6;
+            animation: float 6s linear infinite;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(100vh) rotate(0deg); opacity: 0; }
+            50% { opacity: 0.8; }
+            100% { transform: translateY(-10vh) rotate(360deg); opacity: 0; }
+        }
+
+        .container {
+            position: relative;
+            z-index: 10;
+            background: rgba(20, 20, 20, 0.9);
+            padding: 25px;
+            border-radius: 20px;
+            border: 2px solid var(--rosa-brilhante);
+            box-shadow: 0 0 20px var(--rosa-escuro);
+            text-align: center;
+            width: 90%;
+            max-width: 450px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        h2 { color: var(--rosa-brilhante); margin-bottom: 15px; }
+
+        input {
+            width: 80%;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid var(--rosa-brilhante);
+            background: #1a1a1a;
+            color: white;
+            text-align: center;
+            margin-bottom: 15px;
+            outline: none;
+        }
+
+        button {
+            background: var(--rosa-escuro);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            box-shadow: 0 0 10px var(--rosa-escuro);
+        }
+
+        #notification {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: black;
+            padding: 12px 20px;
+            border-radius: 50px;
+            box-shadow: 0 5px 15px rgba(255, 105, 180, 0.6);
+            z-index: 1000;
+            transition: top 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            font-weight: bold;
+            width: auto;
+            max-width: 80%;
+            text-align: center;
+        }
+
+        .feedback-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .bubble {
+            background: white;
+            color: black;
+            padding: 30px;
+            border-radius: 30px;
+            text-align: center;
+            animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .icon-circle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 0 auto 15px;
+            font-size: 30px;
+            color: white;
+        }
+
+        #qualities-screen { display: none; }
+        .quality-bubble {
+            display: block;
+            background: var(--rosa-brilhante);
+            padding: 10px 15px;
+            border-radius: 50px;
+            margin: 8px auto;
+            cursor: pointer;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            width: fit-content;
+            min-width: 150px;
+        }
+
+        .heart-container {
+            position: relative;
+            width: 100px;
+            height: 90px;
+            margin: 20px auto;
+        }
+
+        .heart-svg { width: 100%; height: 100%; fill: #333; }
+        .heart-fill { fill: var(--rosa-escuro); transition: all 1s ease-out; }
+
+        .share-btn { margin-top: 15px; background: #25d366; }
+
+        @keyframes pop { from { transform: scale(0); } to { transform: scale(1); } }
+    </style>
+</head>
+<body>
+
+    <audio id="clickSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3" type="audio/mpeg">
+    </audio>
+    <audio id="notifSound" preload="auto">
+        <source src="https://assets.mixkit.co/active_storage/sfx/2357/2357-preview.mp3" type="audio/mpeg">
+    </audio>
+
+    <div id="notification">🔔 Esse quiz foi feito pelo @bryanknlh se divirta-se</div>
+    <div class="background-hearts" id="heartContainer"></div>
+
+    <div class="container" id="login-screen">
+        <h2>QUIZ DA VERDADE</h2>
+        <p>Coloque a palavra chave no campo abaixo:</p>
+        <input type="text" id="keyInput" placeholder="Sua resposta...">
+        <br>
+        <button onclick="checkKey()">Conferir Chave</button>
+    </div>
+
+    <div class="container" id="qualities-screen">
+        <h2 id="main-title">Configuração</h2>
+        <p id="sub-title">Digite o nome do seu namorado(a):</p>
+        <div id="bubbles-area">
+            <input type="text" id="partnerName" placeholder="Nome dele(a)..." style="width: 80%;">
+            <br>
+            <button onclick="startQuiz()">Começar Quiz</button>
+        </div>
+    </div>
+
+    <div class="feedback-overlay" id="feedback">
+        <div class="bubble">
+            <div id="statusIcon" class="icon-circle"></div>
+            <strong id="statusText"></strong>
+        </div>
+    </div>
+
+    <script>
+        const correctKey = "quiz amor";
+        let score = 0;
+        let step = 0;
+        let nomeParceiro = "";
+
+        const quiz = [
+            { t: "1/30", q: "Qual minha melhor qualidade?", o: [{text:"Sinceridade", p:4}, {text:"Beleza", p:4}, {text:"Chatice", p:0}]},
+            { t: "2/30", q: "Você gosta do meu sorriso?", o: [{text:"Amo!", p:4}, {text:"É bonitinho", p:2}, {text:"Chatice", p:0}]},
+            { t: "3/30", q: "O que sente ao me abraçar?", o: [{text:"Segurança", p:4}, {text:"Paz", p:4}, {text:"Nada demais", p:0}]},
+            { t: "4/30", q: "Me trocaria por um Pix de 100k?", o: [{text:"Nunca!", p:4}, {text:"Talvez", p:1}, {text:"Sim", p:0}]},
+            { t: "5/30", q: "Gosta da minha voz?", o: [{text:"Melhor som", p:4}, {text:"Legalzinha", p:2}, {text:"Chatice", p:0}]},
+            { t: "6/30", q: "Quanto tempo pensa em mim?", o: [{text:"24h por dia", p:4}, {text:"Sempre que dá", p:2}, {text:"Raramente", p:0}]},
+            { t: "7/30", q: "Sou seu porto seguro?", o: [{text:"Com certeza", p:4}, {text:"Talvez", p:1}, {text:"Não", p:0}]},
+            { t: "8/30", q: "Se eu sumisse hoje?", o: [{text:"Ficaria triste", p:4}, {text:"Seguiria a vida", p:0}]},
+            { t: "9/30", q: "Nossa conexão é...", o: [{text:"De outras vidas", p:4}, {text:"Forte", p:2}, {text:"Fraca", p:0}]},
+            { t: "10/30", q: "Você me acha inteligente?", o: [{text:"Um gênio", p:4}, {text:"Na média", p:2}, {text:"Não", p:0}]},
+            { t: "11/30", q: "E o meu estilo?", o: [{text:"Impecável", p:4}, {text:"Legal", p:2}, {text:"Péssimo", p:0}]},
+            { t: "12/30", q: "Sente ciúmes de mim?", o: [{text:"Sim!", p:4}, {text:"Um pouco", p:2}, {text:"Zero", p:0}]},
+            { t: "13/30", q: "Casaria comigo?", o: [{text:"Sim!", p:4}, {text:"No futuro", p:2}, {text:"Não", p:0}]},
+            { t: "14/30", q: "Qual o tamanho do seu amor?", o: [{text:"Infinito", p:4}, {text:"Grande", p:2}, {text:"Pequeno", p:0}]},
+            { t: "15/30", q: "Gosta do meu cheiro?", o: [{text:"Amo", p:4}, {text:"Sim", p:2}, {text:"Ruim", p:0}]},
+            { t: "16/30", q: "Eu te faço feliz?", o: [{text:"Muito", p:4}, {text:"Sim", p:2}, {text:"Não", p:0}]},
+            { t: "17/30", q: "Mandaria foto todo dia?", o: [{text:"Sim", p:4}, {text:"Às vezes", p:2}, {text:"Não", p:0}]},
+            { t: "18/30", q: "Acredita no 'Para Sempre'?", o: [{text:"Sim", p:4}, {text:"Talvez", p:2}, {text:"Não", p:0}]},
+            { t: "19/30", q: "Perdoaria um erro bobo?", o: [{text:"Sim", p:4}, {text:"Depende", p:1}, {text:"Não", p:0}]},
+            { t: "20/30", q: "Quem manda na relação?", o: [{text:"Você", p:4}, {text:"Eu", p:4}, {text:"Ninguém", p:2}]},
+            { t: "21/30", q: "Sente saudade agora?", o: [{text:"Muita", p:4}, {text:"Pouca", p:2}, {text:"Não", p:0}]},
+            { t: "22/30", q: "O que acha do meu beijo?", o: [{text:"O melhor", p:4}, {text:"Bom", p:2}, {text:"Melhorar", p:0}]},
+            { t: "23/30", q: "Sou sua pessoa favorita?", o: [{text:"Sim", p:4}, {text:"Uma delas", p:2}, {text:"Não", p:0}]},
+            { t: "24/30", q: "Viajaria o mundo comigo?", o: [{text:"Sim", p:4}, {text:"Talvez", p:1}, {text:"Não", p:0}]},
+            { t: "25/30", q: "Gosta de me irritar?", o: [{text:"Amo", p:4}, {text:"Um pouco", p:2}]},
+            { t: "26/30", q: "Apresentaria pros pais?", o: [{text:"Sim", p:4}, {text:"Um dia", p:2}, {text:"Não", p:0}]},
+            { t: "27/30", q: "Daria a última pizza?", o: [{text:"Sim", p:4}, {text:"Metade", p:2}, {text:"Não", p:0}]},
+            { t: "28/30", q: "Você sonha comigo?", o: [{text:"Sempre", p:4}, {text:"Raramente", p:2}, {text:"Não", p:0}]},
+            { t: "29/30", q: "Sou o amor da sua vida?", o: [{text:"Com certeza", p:4}, {text:"Talvez", p:2}, {text:"Não", p:0}]},
+            { t: "30/30", q: "Pronta?", o: [{text:"Sim!", p:4}]}
+        ];
+
+        function playSound(id) {
+            const audio = document.getElementById(id);
+            if (audio) {
+                audio.currentTime = 0;
+                audio.play().catch(e => console.log("Erro som:", e));
+            }
+        }
+
+        function createHeart() {
+            const heart = document.createElement('div');
+            heart.classList.add('heart');
+            heart.innerHTML = '❤';
+            heart.style.left = Math.random() * 100 + 'vw';
+            heart.style.animationDuration = (Math.random() * 3 + 3) + 's';
+            document.getElementById('heartContainer').appendChild(heart);
+            setTimeout(() => heart.remove(), 6000);
+        }
+        setInterval(createHeart, 300);
+
+        function checkKey() {
+            const input = document.getElementById('keyInput').value.toLowerCase().trim();
+            // FORÇA O NAVEGADOR A LIBERAR O SOM AQUI
+            playSound('clickSound');
+
+            if (input === correctKey) {
+                document.getElementById('statusIcon').innerHTML = '✓';
+                document.getElementById('statusIcon').style.backgroundColor = '#4CAF50';
+                document.getElementById('statusText').innerText = 'Chave Correta!';
+                document.getElementById('feedback').style.display = 'flex';
+                
+                setTimeout(() => {
+                    document.getElementById('feedback').style.display = 'none';
+                    document.getElementById('login-screen').style.display = 'none';
+                    document.getElementById('qualities-screen').style.display = 'block';
+                    
+                    const notif = document.getElementById('notification');
+                    notif.style.top = '20px';
+                    
+                    // TOCA O SOM DA NOTIFICAÇÃO
+                    setTimeout(() => playSound('notifSound'), 100);
+                    
+                    setTimeout(() => { notif.style.top = '-100px'; }, 5000);
+                }, 1500);
+            } else {
+                document.getElementById('statusIcon').innerHTML = 'X';
+                document.getElementById('statusIcon').style.backgroundColor = '#f44336';
+                document.getElementById('statusText').innerText = 'Chave Incorreta';
+                document.getElementById('feedback').style.display = 'flex';
+                setTimeout(() => { document.getElementById('feedback').style.display = 'none'; }, 1500);
+            }
+        }
+
+        function startQuiz() {
+            nomeParceiro = document.getElementById('partnerName').value.trim();
+            if (nomeParceiro === "") return alert("Digite o nome!");
+            playSound('clickSound');
+            showStep();
+        }
+
+        function showStep() {
+            if (step < quiz.length) {
+                const item = quiz[step];
+                document.getElementById('main-title').innerText = item.t;
+                document.getElementById('sub-title').innerText = item.q;
+                const area = document.getElementById('bubbles-area');
+                area.innerHTML = '';
+                item.o.forEach(opt => {
+                    const div = document.createElement('div');
+                    div.className = 'quality-bubble';
+                    div.innerText = opt.text;
+                    div.onclick = () => { playSound('clickSound'); score += opt.p; step++; showStep(); };
+                    area.appendChild(div);
+                });
+            } else {
+                renderFinal();
+            }
+        }
+
+        function renderFinal() {
+            let p = Math.min(Math.round((score / 120) * 100), 100);
+            document.getElementById('main-title').innerText = "Resultado Final";
+            document.getElementById('sub-title').innerText = "Amor por " + nomeParceiro + ":";
+            const area = document.getElementById('bubbles-area');
+            area.innerHTML = `
+                <div class="heart-container">
+                    <svg class="heart-svg" viewBox="0 0 32 29.6">
+                        <defs><clipPath id="h-clip"><rect id="f-rect" x="0" y="30" width="32" height="30" /></clipPath></defs>
+                        <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,16,21.2,16,21.2s16-11.8,16-21.2C32,3.8,28.2,0,23.6,0z"/>
+                        <path class="heart-fill" clip-path="url(#h-clip)" d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,16,21.2,16,21.2s16-11.8,16-21.2C32,3.8,28.2,0,23.6,0z"/>
+                    </svg>
+                </div>
+                <h1 style="color:var(--rosa-brilhante); font-size: 3em;">${p}%</h1>
+                <button class="share-btn" onclick="shareResult(${p})">Compartilhar Resultado</button>
+            `;
+            setTimeout(() => {
+                document.getElementById('f-rect').setAttribute('y', 30 - (30 * (p / 100)));
+            }, 300);
+        }
+
+        function shareResult(p) {
+            const text = `Meu nível de amor por ${nomeParceiro} é de ${p}%! ❤️ Quiz feito pelo @bryanknlh`;
+            if (navigator.share) {
+                navigator.share({ title: 'Quiz da Verdade', text: text, url: window.location.href });
+            } else {
+                alert(text);
+            }
+        }
+    </script>
+</body>
+          </html>
